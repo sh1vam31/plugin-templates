@@ -207,6 +207,63 @@ describe("Template parser", () => {
         `);
     });
 
+    test("should handle empty date custom variable gracefully without crashing", async () => {
+        const template = {
+            id: "note-id",
+            title: "Template",
+            body: dedent`
+                ---
+                date_var: date
+                ---
+
+                Date: [{{ date_var }}]
+            `
+        };
+        testVariableTypes({
+            date_var: DateCustomVariable
+        });
+        handleVariableDialog("ok", {
+            date_var: ""
+        });
+
+        const parsedTemplate = await parser.parseTemplate(template);
+
+        assert(parsedTemplate);
+        expect(parsedTemplate.body).toEqual(dedent`
+            Date: []
+        `);
+    });
+
+    test("should convert alternative date format to configured format and fallback gracefully on invalid text", async () => {
+        const template = {
+            id: "note-id",
+            title: "Template",
+            body: dedent`
+                ---
+                date_iso: date
+                date_invalid: date
+                ---
+
+                ISO: {{ date_iso }}, Invalid: {{ date_invalid }}
+            `
+        };
+        testVariableTypes({
+            date_iso: DateCustomVariable,
+            date_invalid: DateCustomVariable
+        });
+        handleVariableDialog("ok", {
+            date_iso: "2021-12-03",
+            date_invalid: "not-a-date"
+        });
+
+        const parsedTemplate = await parser.parseTemplate(template);
+
+        assert(parsedTemplate);
+        expect(parsedTemplate.body).toEqual(dedent`
+            ISO: 03/12/2021, Invalid: not-a-date
+        `);
+    });
+
     test("should parse dropdown custom variable correctly", async () => {
         const template = {
             id: "note-id",
